@@ -50,12 +50,16 @@ async fn healthz() -> Result<HttpResponse, Error> {
 
 async fn metrics(state: web::Data<State>) -> Result<HttpResponse, Error> {
     let mut buffer = Vec::new();
+
     let encoder = TextEncoder::new();
     let metrics = state.registry.gather();
-    encoder.encode(&metrics, &mut buffer).unwrap();
-    Ok(HttpResponse::Ok()
-        .content_type(encoder.format_type())
-        .body(buffer))
+
+    match encoder.encode(&metrics, &mut buffer) {
+        Ok(()) => Ok(HttpResponse::Ok()
+            .content_type(encoder.format_type())
+            .body(buffer)),
+        Err(_) => Ok(HttpResponse::InternalServerError().finish()),
+    }
 }
 
 async fn statusz() -> Result<HttpResponse, Error> {
