@@ -1,10 +1,11 @@
 use {
     actix_rt::System,
     actix_web::{
-        http::StatusCode, middleware::Logger, web, App, Error, HttpRequest, HttpResponse,
-        HttpServer,
+        http::StatusCode, http::Version, middleware::Logger, web, App, Error, HttpRequest,
+        HttpResponse, HttpServer,
     },
     env_logger,
+    prometheus::{CounterVec, Encoder, HistogramOpts, HistogramVec, Opts, Registry, TextEncoder},
     std::{
         env,
         fs::File,
@@ -14,6 +15,8 @@ use {
 
 mod default {
     pub const ASSET_PATH: &str = "assets";
+    pub const METRIC_NAMESPACE: &str = "default_backend";
+    pub const METRIC_SUBSYSTEM: &str = "http";
 }
 
 mod environment {
@@ -34,15 +37,46 @@ mod header {
     pub const SERVICE_PORT: &str = "X-Service-Port";
 }
 
+#[derive(Clone, Debug)]
+struct State {
+    registry: Registry,
+    request_counter: CounterVec,
+    request_duration: HistogramVec,
+}
+
 async fn healthz() -> Result<HttpResponse, Error> {
     Ok(HttpResponse::Ok().finish())
+}
+
+async fn metrics(state: web::Data<State>) -> Result<HttpResponse, Error> {
+    let mut buffer = Vec::new();
+    let encoder = TextEncoder::new();
+    let metrics = state.registry.gather();
+    encoder.encode(&metrics, &mut buffer).unwrap();
+    Ok(HttpResponse::Ok()
+        .content_type(encoder.format_type())
+        .body(buffer))
 }
 
 async fn statusz() -> Result<HttpResponse, Error> {
     Ok(HttpResponse::Ok().finish())
 }
 
-async fn handler(request: HttpRequest) -> Result<HttpResponse, Error> {
+async fn handler(request: HttpRequest, state: web::Data<State>) -> Result<HttpResponse, Error> {
+    let proto = match request.version() {
+        Version::HTTP_09 => "HTTP/0.9",
+        Version::HTTP_10 => "HTTP/1.0",
+        Version::HTTP_11 => "HTTP/1.1",
+        Version::HTTP_2 => "HTTP/2.0",
+        Version::HTTP_3 => "HTTP/3.0",
+        _ => "Unknown",
+    };
+
+    let _timer = state
+        .request_duration
+        .with_label_values(&[proto])
+        .start_timer();
+
     let asset = env::var(environment::ASSET_PATH).unwrap_or(default::ASSET_PATH.into());
 
     let code = match request.headers().get(header::CODE) {
@@ -153,6 +187,8 @@ async fn handler(request: HttpRequest) -> Result<HttpResponse, Error> {
             );
     }
 
+    state.request_counter.with_label_values(&[proto]).inc();
+
     match file {
         Some(file) => {
             let mut body = String::new();
@@ -166,16 +202,59 @@ async fn handler(request: HttpRequest) -> Result<HttpResponse, Error> {
     }
 }
 
+fn initialize_app_state() -> web::Data<State> {
+    let registry = Registry::new();
+
+    let request_counter = CounterVec::new(
+        Opts::new("request_count_total", "Counter of HTTP requests made.")
+            .namespace(default::METRIC_NAMESPACE)
+            .subsystem(default::METRIC_SUBSYSTEM),
+        &["proto"],
+    )
+    .unwrap();
+
+    let request_duration = HistogramVec::new(
+        HistogramOpts::new(
+            "request_duration_milliseconds",
+            "Histogram of the time (in milliseconds) each request took.",
+        )
+        .namespace(default::METRIC_NAMESPACE)
+        .subsystem(default::METRIC_SUBSYSTEM)
+        .buckets(vec![
+            0.001, 0.003, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0,
+        ]),
+        &["proto"],
+    )
+    .unwrap();
+
+    registry
+        .register(Box::new(request_counter.clone()))
+        .unwrap();
+    registry
+        .register(Box::new(request_duration.clone()))
+        .unwrap();
+
+    web::Data::new(State {
+        registry,
+        request_counter,
+        request_duration,
+    })
+}
+
 fn main() -> IOResult<()> {
     let addr = env::var(environment::LISTEN_ADDR).unwrap_or("127.0.0.1".into());
     let port = env::var(environment::LISTEN_PORT).unwrap_or("3000".into());
 
     env_logger::init();
 
+    let data = initialize_app_state();
+
     System::new("server").block_on(async move {
         HttpServer::new(move || {
             App::new()
+                .app_data(data.clone())
                 .route("/healthz", web::to(healthz))
+                .route("/metrics", web::to(metrics))
                 .route("/statusz", web::to(statusz))
                 .route("*", web::to(handler))
                 .wrap(Logger::default())
