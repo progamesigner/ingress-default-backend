@@ -65,17 +65,17 @@ pub async fn handler(request: HttpRequest, state: Data<State>) -> Result<HttpRes
         Err(_) => StatusCode::NOT_FOUND,
     };
 
-    let file = match File::open(format!("{}/{}.{}", state.asset, code, extension)) {
-        Ok(file) => Some(file),
+    let (format, file) = match File::open(format!("{}/{}.{}", state.asset, code, extension)) {
+        Ok(file) => (format, Some(file)),
         Err(_) => match File::open(format!("{}/{}x.{}", state.asset, code / 10, extension)) {
-            Ok(file) => Some(file),
+            Ok(file) => (format, Some(file)),
             Err(_) => match File::open(format!("{}/{}xx.{}", state.asset, code / 100, extension)) {
-                Ok(file) => Some(file),
+                Ok(file) => (format, Some(file)),
                 Err(_) => match File::open(format!("{}/index.{}", state.asset, extension)) {
-                    Ok(file) => Some(file),
+                    Ok(file) => (format, Some(file)),
                     Err(_) => match File::open(format!("{}/index.html", state.asset)) {
-                        Ok(file) => Some(file),
-                        Err(_) => None,
+                        Ok(file) => ("text/html", Some(file)),
+                        Err(_) => ("text/html", None),
                     },
                 },
             },
