@@ -3,6 +3,7 @@ name = "ingress-default-backend"
 version = "1.0.0"
 authors = ["Yang Sheng Han <progamesigner@gmail.com>"]
 edition = "2018"
+license = "MIT"
 
 [dependencies]
 actix-rt = "1.0"
