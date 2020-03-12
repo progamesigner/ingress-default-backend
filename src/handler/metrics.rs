@@ -1,14 +1,14 @@
 use {
-    crate::state::State,
+    crate::state::MetricState,
     actix_web::{web::Data, Error, HttpResponse},
     prometheus::{Encoder, TextEncoder},
 };
 
-pub async fn handler(state: Data<State>) -> Result<HttpResponse, Error> {
+pub async fn handler(state: Data<MetricState>) -> Result<HttpResponse, Error> {
     let mut buffer = Vec::new();
 
     let encoder = TextEncoder::new();
-    let metrics = state.registry.gather();
+    let metrics = state.gather();
 
     match encoder.encode(&metrics, &mut buffer) {
         Ok(()) => Ok(HttpResponse::Ok()

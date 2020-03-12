@@ -1,45 +1,31 @@
 use {
-    prometheus::{CounterVec, HistogramOpts, HistogramVec, Opts, Registry},
-    std::env,
+    crate::env::Env,
+    prometheus::{
+        proto::MetricFamily, CounterVec, HistogramOpts, HistogramTimer, HistogramVec, Opts,
+        Registry,
+    },
 };
 
 #[derive(Clone, Debug)]
-pub struct State {
-    pub addr: String,
-    pub asset: String,
-    pub debug: bool,
-    pub port: String,
-    pub registry: Registry,
-    pub request_counter: CounterVec,
-    pub request_duration: HistogramVec,
+pub struct State {}
+
+#[derive(Clone, Debug)]
+pub struct MetricState {
+    registry: Registry,
 }
 
-mod default {
-    pub const ASSET_PATH: &str = "assets";
-    pub const DEBUG_MODE: &str = "false";
-    pub const LISTEN_ADDR: &str = "127.0.0.1";
-    pub const LISTEN_PORT: &str = "3000";
-    pub const METRIC_NAMESPACE: &str = "default_backend";
-    pub const METRIC_SUBSYSTEM: &str = "http";
-}
-
-mod environment {
-    pub const ASSET_PATH: &str = "SERVER_ASSET_PATH";
-    pub const DEBUG_MODE: &str = "SERVER_DEBUG_MODE";
-    pub const LISTEN_ADDR: &str = "SERVER_LISTEN_ADDR";
-    pub const LISTEN_PORT: &str = "SERVER_LISTEN_PORT";
-    pub const METRIC_NAMESPACE: &str = "SERVER_METRIC_NAMESPACE";
-    pub const METRIC_SUBSYSTEM: &str = "SERVER_METRIC_SUBSYSTEM";
+#[derive(Clone, Debug)]
+pub struct ServiceState {
+    request_counter: CounterVec,
+    request_duration: HistogramVec,
 }
 
 impl State {
-    pub fn new() -> State {
+    pub fn new() -> (ServiceState, MetricState) {
         let registry = Registry::new();
 
-        let namespace =
-            env::var(environment::METRIC_NAMESPACE).unwrap_or(default::METRIC_NAMESPACE.into());
-        let subsystem =
-            env::var(environment::METRIC_SUBSYSTEM).unwrap_or(default::METRIC_SUBSYSTEM.into());
+        let namespace = Env::parse_metric_namespace();
+        let subsystem = Env::parse_metric_subsystem();
 
         let request_counter = CounterVec::new(
             Opts::new("request_count_total", "Counter of HTTP requests made.")
@@ -70,21 +56,30 @@ impl State {
             .register(Box::new(request_duration.clone()))
             .unwrap();
 
-        State {
-            addr: env::var(environment::LISTEN_ADDR).unwrap_or(default::LISTEN_ADDR.into()),
-            asset: env::var(environment::ASSET_PATH).unwrap_or(default::ASSET_PATH.into()),
-            debug: match env::var(environment::DEBUG_MODE)
-                .unwrap_or(default::DEBUG_MODE.into())
-                .to_lowercase()
-                .as_str()
-            {
-                "1" | "ok" | "okay" | "on" | "true" | "yep" | "yes" => true,
-                _ => false,
+        (
+            ServiceState {
+                request_counter,
+                request_duration,
             },
-            port: env::var(environment::LISTEN_PORT).unwrap_or(default::LISTEN_PORT.into()),
-            registry,
-            request_counter,
-            request_duration,
-        }
+            MetricState { registry },
+        )
+    }
+}
+
+impl MetricState {
+    pub fn gather(&self) -> Vec<MetricFamily> {
+        self.registry.gather()
+    }
+}
+
+impl ServiceState {
+    pub fn increase_request_counter(&self, proto: &str) {
+        self.request_counter.with_label_values(&[proto]).inc()
+    }
+
+    pub fn start_timer(&self, proto: &str) -> HistogramTimer {
+        self.request_duration
+            .with_label_values(&[proto])
+            .start_timer()
     }
 }

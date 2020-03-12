@@ -1,5 +1,5 @@
 use {
-    crate::state::State,
+    crate::{env::Env, state::ServiceState},
     actix_web::{http::StatusCode, http::Version, web::Data, Error, HttpRequest, HttpResponse},
     std::{
         fs::File,
@@ -18,7 +18,10 @@ mod header {
     pub const SERVICE_PORT: &str = "X-Service-Port";
 }
 
-pub async fn handler(request: HttpRequest, state: Data<State>) -> Result<HttpResponse, Error> {
+pub async fn handler(
+    request: HttpRequest,
+    state: Data<ServiceState>,
+) -> Result<HttpResponse, Error> {
     let proto = match request.version() {
         Version::HTTP_09 => "HTTP/0.9",
         Version::HTTP_10 => "HTTP/1.0",
@@ -28,10 +31,9 @@ pub async fn handler(request: HttpRequest, state: Data<State>) -> Result<HttpRes
         _ => "Unknown",
     };
 
-    let _timer = state
-        .request_duration
-        .with_label_values(&[proto])
-        .start_timer();
+    let _ = state.start_timer(proto);
+
+    let asset = Env::parse_asset_path();
 
     let code = match request.headers().get(header::CODE) {
         Some(code) => match code.to_str() {
@@ -65,15 +67,15 @@ pub async fn handler(request: HttpRequest, state: Data<State>) -> Result<HttpRes
         Err(_) => StatusCode::NOT_FOUND,
     };
 
-    let (format, file) = match File::open(format!("{}/{}.{}", state.asset, code, extension)) {
+    let (format, file) = match File::open(format!("{}/{}.{}", asset, code, extension)) {
         Ok(file) => (format, Some(file)),
-        Err(_) => match File::open(format!("{}/{}x.{}", state.asset, code / 10, extension)) {
+        Err(_) => match File::open(format!("{}/{}x.{}", asset, code / 10, extension)) {
             Ok(file) => (format, Some(file)),
-            Err(_) => match File::open(format!("{}/{}xx.{}", state.asset, code / 100, extension)) {
+            Err(_) => match File::open(format!("{}/{}xx.{}", asset, code / 100, extension)) {
                 Ok(file) => (format, Some(file)),
-                Err(_) => match File::open(format!("{}/index.{}", state.asset, extension)) {
+                Err(_) => match File::open(format!("{}/index.{}", asset, extension)) {
                     Ok(file) => (format, Some(file)),
-                    Err(_) => match File::open(format!("{}/index.html", state.asset)) {
+                    Err(_) => match File::open(format!("{}/index.html", asset)) {
                         Ok(file) => ("text/html", Some(file)),
                         Err(_) => ("text/html", None),
                     },
@@ -86,7 +88,7 @@ pub async fn handler(request: HttpRequest, state: Data<State>) -> Result<HttpRes
 
     response.content_type(format);
 
-    if state.debug {
+    if Env::is_debug_mode() {
         response
             .if_some(request.headers().get(header::CODE), |header, response| {
                 response.header(header::CODE, header.as_bytes());
@@ -132,7 +134,7 @@ pub async fn handler(request: HttpRequest, state: Data<State>) -> Result<HttpRes
             );
     }
 
-    state.request_counter.with_label_values(&[proto]).inc();
+    state.increase_request_counter(proto);
 
     match file {
         Some(file) => {
