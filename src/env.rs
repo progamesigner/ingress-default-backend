@@ -1,5 +1,7 @@
-use {
-    std::{env, net::SocketAddr},
+use std::{
+    env,
+    env::{VarError, Vars},
+    net::SocketAddr,
 };
 
 #[derive(Debug)]
@@ -37,6 +39,10 @@ impl Env {
         }
     }
 
+    pub fn parse(name: &str) -> Result<String, VarError> {
+        env::var(name)
+    }
+
     pub fn parse_asset_path() -> String {
         env::var(environment::ASSET_PATH).unwrap_or(default::ASSET_PATH.into())
     }
@@ -71,5 +77,9 @@ impl Env {
             Err(_) => default::LISTEN_PORT.into(),
         };
         format!("{}:{}", addr, port).parse().unwrap()
+    }
+
+    pub fn vars() -> Vars {
+        env::vars()
     }
 }

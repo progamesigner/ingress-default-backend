@@ -1,6 +1,8 @@
 use {
     crate::{env::Env, state::ServiceState},
     actix_web::{http::StatusCode, http::Version, web::Data, Error, HttpRequest, HttpResponse},
+    handlebars::{Context, Handlebars, Helper, HelperResult, JsonRender, Output, RenderContext},
+    serde_json::value::Map,
     std::{
         fs::File,
         io::{BufReader, Read},
@@ -16,6 +18,29 @@ mod header {
     pub const REQUEST_ID: &str = "X-Request-Id";
     pub const SERVICE_NAME: &str = "X-Service-Name";
     pub const SERVICE_PORT: &str = "X-Service-Port";
+}
+
+fn handlebar_helper_env(
+    helper: &Helper,
+    _: &Handlebars,
+    _: &Context,
+    _: &mut RenderContext,
+    output: &mut dyn Output,
+) -> HelperResult {
+    match helper.param(0) {
+        Some(name) => {
+            let name = format!("{}", name.value().render());
+            output.write(Env::parse(&name).unwrap_or("".into()).as_ref())?;
+            Ok(())
+        }
+        None => {
+            for (key, value) in Env::vars() {
+                let line = format!("{}={}\n", key, value);
+                output.write(line.as_ref())?;
+            }
+            Ok(())
+        }
+    }
 }
 
 pub async fn handler(
@@ -45,6 +70,8 @@ pub async fn handler(
         },
         None => 404,
     };
+
+    let data = Map::new();
 
     let format = match request.headers().get(header::FORMAT) {
         Some(format) => match format.to_str() {
@@ -85,8 +112,10 @@ pub async fn handler(
     };
 
     let mut response = HttpResponse::build(status);
+    let mut template = Handlebars::new();
 
     response.content_type(format);
+    template.register_helper("env", Box::new(handlebar_helper_env));
 
     if Env::is_debug_mode() {
         response
@@ -136,15 +165,14 @@ pub async fn handler(
 
     state.increase_request_counter(proto);
 
-    match file {
-        Some(file) => {
-            let mut body = String::new();
-            let mut reader = BufReader::new(file);
-            match reader.read_to_string(&mut body) {
-                Ok(_) => Ok(response.body(body)),
-                Err(_) => Ok(response.status(StatusCode::NOT_FOUND).finish()),
+    if let Some(file) = file {
+        let mut body = String::new();
+        let mut reader = BufReader::new(file);
+        if let Ok(_) = reader.read_to_string(&mut body) {
+            if let Ok(body) = template.render_template(body.as_str(), &data) {
+                return Ok(response.body(body));
             }
-        },
-        None => Ok(response.status(StatusCode::NOT_FOUND).finish()),
+        }
     }
+    Ok(response.status(StatusCode::NOT_FOUND).finish())
 }
