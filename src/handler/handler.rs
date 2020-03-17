@@ -144,7 +144,7 @@ pub async fn handler(
                 Ok(_) => Ok(response.body(body)),
                 Err(_) => Ok(response.status(StatusCode::NOT_FOUND).finish()),
             }
-        }
+        },
         None => Ok(response.status(StatusCode::NOT_FOUND).finish()),
     }
 }
