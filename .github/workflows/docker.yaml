@@ -19,7 +19,7 @@ jobs:
       with:
         add_git_labels: true
         password: ${{ secrets.DOCKER_PASSWORD }}
-        repository: progamesigner/ingress-default-backend
+        repository: ${{ github.repository }}
         tags: latest
         username: ${{ secrets.DOCKER_USERNAME }}
       if: "!contains(github.ref, 'refs/tags/v')"
@@ -28,7 +28,7 @@ jobs:
       with:
         add_git_labels: true
         password: ${{ secrets.DOCKER_PASSWORD }}
-        repository: progamesigner/ingress-default-backend
+        repository: ${{ github.repository }}
         tag_with_ref: latest
         username: ${{ secrets.DOCKER_USERNAME }}
       if: "contains(github.ref, 'refs/tags/v')"
