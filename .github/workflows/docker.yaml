@@ -15,17 +15,20 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: Publish "ingress-default-backend" to DockerHub (latest)
-      uses: HurricanKai/Publish-Docker-Github-Action@1.12.2
+      uses: docker/build-push-action@v1
       with:
-        name: progamesigner/ingress-default-backend
-        username: ${{ secrets.DOCKER_USERNAME }}
+        add_git_labels: true
         password: ${{ secrets.DOCKER_PASSWORD }}
+        repository: progamesigner/ingress-default-backend
+        tags: latest
+        username: ${{ secrets.DOCKER_USERNAME }}
       if: "!contains(github.ref, 'refs/tags/v')"
     - name: Publish "ingress-default-backend" to DockerHub
-      uses: HurricanKai/Publish-Docker-Github-Action@1.12.2
+      uses: docker/build-push-action@v1
       with:
-        name: progamesigner/ingress-default-backend
-        username: ${{ secrets.DOCKER_USERNAME }}
+        add_git_labels: true
         password: ${{ secrets.DOCKER_PASSWORD }}
-        tagging: true
+        repository: progamesigner/ingress-default-backend
+        tag_with_ref: latest
+        username: ${{ secrets.DOCKER_USERNAME }}
       if: "contains(github.ref, 'refs/tags/v')"
