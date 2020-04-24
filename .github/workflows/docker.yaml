@@ -13,20 +13,26 @@ jobs:
     name: Publish to DockerHub
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - name: Publish "ingress-default-backend" to DockerHub (latest)
-      uses: elgohr/Publish-Docker-Github-Action@2.14
+      uses: docker/build-push-action@v1
       with:
-        name: ${{ github.repository }}
-        username: ${{ secrets.DOCKER_USERNAME }}
+        add_git_labels: true
         password: ${{ secrets.DOCKER_PASSWORD }}
+        repository: ${{ github.repository }}
         tags: latest
-      if: "!contains(github.ref, 'refs/tags/v')"
-    - name: Publish "ingress-default-backend" to DockerHub
-      uses: elgohr/Publish-Docker-Github-Action@2.14
-      with:
-        name: ${{ github.repository }}
         username: ${{ secrets.DOCKER_USERNAME }}
+      if: "!contains(github.ref, 'refs/tags/v')"
+    - name: Tag
+      run: |
+        echo "::set-env name=IMAGE_TAG::$(echo ${{ github.ref }} | sed -e 's/^refs\/tags\/v//g')"
+      if: "contains(github.ref, 'refs/tags/v')"
+    - name: Publish "ingress-default-backend" to DockerHub
+      uses: docker/build-push-action@v1
+      with:
+        add_git_labels: true
         password: ${{ secrets.DOCKER_PASSWORD }}
-        tag_semver: true
+        repository: ${{ github.repository }}
+        tags: ${{ env.IMAGE_TAG }}
+        username: ${{ secrets.DOCKER_USERNAME }}
       if: "contains(github.ref, 'refs/tags/v')"
