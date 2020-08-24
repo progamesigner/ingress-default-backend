@@ -1,4 +1,4 @@
-name: Build and publish to GitHub Packages
+name: Build and publish to DockerHub
 
 on:
   push:
@@ -10,31 +10,29 @@ on:
 
 jobs:
   build:
-    name: Publish to GitHub Packages
+    name: Publish to DockerHub
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: Publish "ingress-default-backend" to GitHub Packages (latest)
+    - name: Publish "ingress-default-backend" to DockerHub (latest)
       uses: docker/build-push-action@v1
       with:
         add_git_labels: true
-        password: ${{ github.token }}
-        registry: docker.pkg.github.com
-        repository: ${{ github.repository }}/server
+        password: ${{ secrets.DOCKER_PASSWORD }}
+        repository: ${{ github.repository }}
         tags: latest
-        username: ${{ github.actor }}
+        username: ${{ secrets.DOCKER_USERNAME }}
       if: "!contains(github.ref, 'refs/tags/v')"
     - name: Tag
       run: |
         echo "::set-env name=IMAGE_TAG::$(echo ${{ github.ref }} | sed -e 's/^refs\/tags\/v//g')"
       if: "contains(github.ref, 'refs/tags/v')"
-    - name: Publish "ingress-default-backend" to GitHub Packages
+    - name: Publish "ingress-default-backend" to DockerHub
       uses: docker/build-push-action@v1
       with:
         add_git_labels: true
-        password: ${{ github.token }}
-        registry: docker.pkg.github.com
-        repository: ${{ github.repository }}/server
+        password: ${{ secrets.DOCKER_PASSWORD }}
+        repository: ${{ github.repository }}
         tags: ${{ env.IMAGE_TAG }}
-        username: ${{ github.actor }}
+        username: ${{ secrets.DOCKER_USERNAME }}
       if: "contains(github.ref, 'refs/tags/v')"
