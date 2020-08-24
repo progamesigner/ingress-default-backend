@@ -1,4 +1,4 @@
-FROM rust:1.43 AS builder
+FROM rust:1.45 AS builder
 
 WORKDIR /build
 
@@ -43,7 +43,7 @@ LABEL org.opencontainers.image.description "A default backend implemented in Rus
 LABEL org.opencontainers.image.documentation "https://github.com/progamesigner/ingress-default-backend"
 LABEL org.opencontainers.image.title "progamesigner/ingress-default-backend"
 LABEL org.opencontainers.image.url "https://github.com/progamesigner/ingress-default-backend"
-LABEL org.opencontainers.image.version "1.2.0"
+LABEL org.opencontainers.image.version "1.2.2"
 
 EXPOSE 8080
 
