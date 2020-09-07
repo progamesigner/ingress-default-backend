@@ -8,7 +8,7 @@ A default backend implemented in Rust for [Nginx Ingress Controller](https://git
 ## Get started
 
 ```sh
-docker run -d -p 8080:8080 progamesigner/ingress-default-backend:latest
+docker run -d -p 8080:8080 docker.pkg.github.com/progamesigner/ingress-default-backend/server:latest
 ```
 
 ## License
