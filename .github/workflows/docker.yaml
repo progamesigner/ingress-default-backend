@@ -20,7 +20,7 @@ jobs:
         add_git_labels: true
         password: ${{ github.token }}
         registry: docker.pkg.github.com
-        repository: ${{ github.repository }}/server
+        repository: ${{ github.repository }}/ingress-default-backend
         tags: latest
         username: ${{ github.actor }}
       if: "!contains(github.ref, 'refs/tags/v')"
@@ -34,7 +34,7 @@ jobs:
         add_git_labels: true
         password: ${{ github.token }}
         registry: docker.pkg.github.com
-        repository: ${{ github.repository }}/server
+        repository: ${{ github.repository }}/ingress-default-backend
         tags: ${{ env.IMAGE_TAG }}
         username: ${{ github.actor }}
       if: "contains(github.ref, 'refs/tags/v')"
