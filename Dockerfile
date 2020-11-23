@@ -1,4 +1,4 @@
-FROM rust:1.45 AS builder
+FROM rust:1.48 AS builder
 
 WORKDIR /build
 
@@ -40,10 +40,6 @@ ENV SERVER_ASSET_PATH=/usr/share/ingress-default-backend
 
 LABEL org.opencontainers.image.authors "Yang Sheng Han <https://progamesigner.com>"
 LABEL org.opencontainers.image.description "A default backend implemented in Rust for Nginx Ingress Controller."
-LABEL org.opencontainers.image.documentation "https://github.com/progamesigner/ingress-default-backend"
-LABEL org.opencontainers.image.title "progamesigner/ingress-default-backend"
-LABEL org.opencontainers.image.url "https://github.com/progamesigner/ingress-default-backend"
-LABEL org.opencontainers.image.version "1.2.2"
 
 EXPOSE 8080
 
