@@ -118,49 +118,37 @@ pub async fn handler(
     template.register_helper("env", Box::new(handlebar_helper_env));
 
     if Env::is_debug_mode() {
-        response
-            .if_some(request.headers().get(header::CODE), |header, response| {
-                response.header(header::CODE, header.as_bytes());
-            })
-            .if_some(request.headers().get(header::FORMAT), |header, response| {
-                response.header(header::FORMAT, header.as_bytes());
-            })
-            .if_some(
-                request.headers().get(header::ORIGINAL_URI),
-                |header, response| {
-                    response.header(header::ORIGINAL_URI, header.as_bytes());
-                },
-            )
-            .if_some(
-                request.headers().get(header::NAMESPACE),
-                |header, response| {
-                    response.header(header::NAMESPACE, header.as_bytes());
-                },
-            )
-            .if_some(
-                request.headers().get(header::INGRESS_NAME),
-                |header, response| {
-                    response.header(header::INGRESS_NAME, header.as_bytes());
-                },
-            )
-            .if_some(
-                request.headers().get(header::SERVICE_NAME),
-                |header, response| {
-                    response.header(header::SERVICE_NAME, header.as_bytes());
-                },
-            )
-            .if_some(
-                request.headers().get(header::SERVICE_PORT),
-                |header, response| {
-                    response.header(header::SERVICE_PORT, header.as_bytes());
-                },
-            )
-            .if_some(
-                request.headers().get(header::REQUEST_ID),
-                |header, response| {
-                    response.header(header::REQUEST_ID, header.as_bytes());
-                },
-            );
+        if let Some(code) = request.headers().get(header::CODE) {
+            response.append_header((header::CODE, code.as_bytes()));
+        }
+
+        if let Some(format) = request.headers().get(header::FORMAT) {
+            response.append_header((header::FORMAT, format.as_bytes()));
+        }
+
+        if let Some(uri) = request.headers().get(header::ORIGINAL_URI) {
+            response.append_header((header::ORIGINAL_URI, uri.as_bytes()));
+        }
+
+        if let Some(namespace) = request.headers().get(header::NAMESPACE) {
+            response.append_header((header::NAMESPACE, namespace.as_bytes()));
+        }
+
+        if let Some(name) = request.headers().get(header::INGRESS_NAME) {
+            response.append_header((header::INGRESS_NAME, name.as_bytes()));
+        }
+
+        if let Some(name) = request.headers().get(header::SERVICE_NAME) {
+            response.append_header((header::SERVICE_NAME, name.as_bytes()));
+        }
+
+        if let Some(port) = request.headers().get(header::SERVICE_PORT) {
+            response.append_header((header::SERVICE_PORT, port.as_bytes()));
+        }
+
+        if let Some(id) = request.headers().get(header::REQUEST_ID) {
+            response.append_header((header::REQUEST_ID, id.as_bytes()));
+        }
     }
 
     state.increase_request_counter(proto);

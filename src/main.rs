@@ -7,5 +7,5 @@ use {actix_rt::System, env_logger, server::start, std::io::Result};
 
 fn main() -> Result<()> {
     env_logger::init();
-    System::new("server").block_on(async { start().await })
+    System::new().block_on(async { start().await })
 }
