@@ -38,9 +38,6 @@ ENV SERVER_LISTEN_ADDR=0.0.0.0
 ENV SERVER_LISTEN_PORT=8080
 ENV SERVER_ASSET_PATH=/usr/share/ingress-default-backend
 
-LABEL org.opencontainers.image.authors "Yang Sheng Han <https://progamesigner.com>"
-LABEL org.opencontainers.image.description "A default backend implemented in Rust for Nginx Ingress Controller."
-
 EXPOSE 8080
 
 ENTRYPOINT ["/bin/server"]
