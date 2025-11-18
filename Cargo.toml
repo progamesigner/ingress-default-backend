@@ -7,7 +7,7 @@ license = "MIT"
 
 [dependencies]
 actix-rt = "2.11"
-actix-web = "4.11"
+actix-web = "4.12"
 env_logger = "0.11"
 futures = "0.3"
 handlebars = "6.3"
